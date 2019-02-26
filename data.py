@@ -49,7 +49,8 @@ def count_data(text):
     text = clean_data(text)
     count = Counter(text).most_common()
     repr(count)
-    with open('vocabulary.txt', 'w+') as f:
+#   with open('vocabulary.txt', 'w+') as f:
+    with open('vocabulary.csv', 'w+') as f:
         f.write(repr(count) + '\n')
         f.close()
     print(count)
