@@ -16,8 +16,9 @@ import pickle
 
 
 def get_data():
-    # Gets the data from a path, at this moment 'train.csv'
-    # file must be in the same folder as data.py
+    # funksjon som tilordner innholdet i filen train.csv til en variabel,
+    # og leser teksten til en ny variabel text. Returnerer verdien til variabelen text.
+    # Legger så til ord fra variabelen med tekst til en liste train_text, hvis ordet ikke allerede befinner seg i listen.
     path = 'train.csv'
     data = pd.read_csv(path)
     text = data['text']
@@ -31,9 +32,10 @@ def get_data():
 
 
 def clean_data(text):
-    # Cleans up the data for unwanted characters
+    # Funksjon hvor regex blir brukt til å fjerne alle bokstaver som ikke er i det engelske alfabetet.
+    #Filtrerer bort stopwords som this, and, or osv.
 
-    text = re.sub("[^ A-Za-z0-9]", '', str(text)).lower().split()
+    text = re.sub("[^ A-Za-z]", '', str(text)).lower().split()
 
     stop_words = set(stopwords.words('english'))
     text = [w for w in text if w not in stop_words]
@@ -43,9 +45,10 @@ def clean_data(text):
 
 
 def count_data(text):
-    # Counts the most common words that occurs in the data
-    # and writes them to a new vocabulary file
-
+    # Funksjon som teller de mest vanlige ordene som dukker opp i datasettet
+    # og skriver dem ut til en ny fil 'vocabulary.csv', hvis filen ikke eksisterer,
+    # eller overskriver hvis den eksisterer
+    # repr() metoden returnerer en  utskrivbar representasjonsstreng av variabelen
     text = clean_data(text)
     count = Counter(text).most_common()
     repr(count)
@@ -53,16 +56,16 @@ def count_data(text):
     with open('vocabulary.csv', 'w+') as f:
         f.write(repr(count) + '\n')
         f.close()
-    print(count)
+    #print(count)
 
     return count
 
 
-
-
 def run():
-    # Function that runs the code
+    # Her kjøres programmet. Dataen blir hentet fra csv filen, og filtreres.
+    # Returnerer et vokabular med de mest nevnte ordene.
     count_data(get_data())
 
 
+# tilkaller funksjonen som kjører programmet
 run()
