@@ -45,6 +45,7 @@ def clean_data(text):
 def count_data(text):
     # Counts the most common words that occurs in the data
     # and writes them to a new vocabulary file
+    # repr() method returns the variable as a printable representation 
 
     text = clean_data(text)
     count = Counter(text).most_common()
