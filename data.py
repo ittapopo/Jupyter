@@ -13,7 +13,7 @@ import string
 from collections import Counter
 import csv
 import pickle
-
+from itertools import dropwhile
 
 def get_data():
     # funksjon som tilordner innholdet i filen train.csv til en variabel,
@@ -33,13 +33,13 @@ def get_data():
 
 def clean_data(text):
     # Funksjon hvor regex blir brukt til å fjerne alle bokstaver som ikke er i det engelske alfabetet.
-    #Filtrerer bort stopwords som this, and, or osv.
+    # Filtrerer bort stopwords som this, and, or osv.
 
     text = re.sub("[^ A-Za-z]", '', str(text)).lower().split()
 
     stop_words = set(stopwords.words('english'))
     text = [w for w in text if w not in stop_words]
-    text = str(text).strip().split()
+#    text = str(text).strip().split()
 
     return text
 
@@ -48,15 +48,17 @@ def count_data(text):
     # Funksjon som teller de mest vanlige ordene som dukker opp i datasettet
     # og skriver dem ut til en ny fil 'vocabulary.csv', hvis filen ikke eksisterer,
     # eller overskriver hvis den eksisterer
-    # repr() metoden returnerer en  utskrivbar representasjonsstreng av variabelen
+    # repr() metoden returnerer en utskrivbar representasjonsstreng av variabelen
     text = clean_data(text)
-    count = Counter(text).most_common()
+    c = Counter(text)
+    count = Counter(k for k in c.elements() if c[k] >= 5)
+
     repr(count)
-#   with open('vocabulary.txt', 'w+') as f:
+#     with open('vocabulary.txt', 'w+') as f:
     with open('vocabulary.csv', 'w+') as f:
         f.write(repr(count) + '\n')
         f.close()
-    #print(count)
+    print(count)
 
     return count
 
