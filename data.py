@@ -9,11 +9,8 @@ from nltk.corpus import words
 from scipy import sparse
 from IPython.display import display
 import re
-import string
 from collections import Counter
-import csv
-import pickle
-from itertools import dropwhile
+
 
 def get_data():
     # funksjon som tilordner innholdet i filen train.csv til en variabel,
@@ -51,7 +48,7 @@ def count_data(text):
     # repr() metoden returnerer en utskrivbar representasjonsstreng av variabelen
     text = clean_data(text)
     c = Counter(text)
-    count = Counter(k for k in c.elements() if c[k] >= 5)
+    count = Counter(k for k in c.elements() if c[k] >= 20)
 
     repr(count)
 #     with open('vocabulary.txt', 'w+') as f:
