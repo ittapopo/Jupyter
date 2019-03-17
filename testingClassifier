@@ -1,0 +1,127 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib
+import nltk
+from nltk import word_tokenize
+from nltk.corpus import stopwords
+from nltk.corpus import words
+from scipy import sparse
+from IPython.display import display
+import re
+from collections import Counter
+
+
+def get_data():
+    # funksjon som tilordner innholdet i filen train.csv til en variabel,
+    # og leser teksten til en ny variabel text. Returnerer verdien til variabelen text.
+    # Legger så til ord fra variabelen med tekst til en liste train_text, hvis ordet ikke allerede befinner seg i listen.
+    path = 'train.csv'
+    data = pd.read_csv(path)
+    text = data['text']
+
+    train_text = []
+    for i in range(len(text)):
+        if text[i] not in train_text:
+            train_text.append(text[i])
+
+    return train_text
+
+
+def clean_data(text):
+    # Funksjon hvor regex blir brukt til å fjerne alle bokstaver som ikke er i det engelske alfabetet.
+    # Filtrerer bort stopwords som this, and, or osv.
+
+    text = re.sub("[^ A-Za-z]", '', str(text)).lower().split()
+
+    stop_words = set(stopwords.words('english'))
+    text = [w for w in text if w not in stop_words]
+#    text = str(text).strip().split()
+
+    return text
+
+
+def count_data(text):
+    # Funksjon som teller de mest vanlige ordene som dukker opp i datasettet
+    # og skriver dem ut til en ny fil 'vocabulary.csv', hvis filen ikke eksisterer,
+    # eller overskriver hvis den eksisterer
+    # repr() metoden returnerer en utskrivbar representasjonsstreng av variabelen
+    text = clean_data(text)
+    c = Counter(text)
+    count = Counter(k for k in c.elements() if c[k] >= 20)
+
+    repr(count)
+#     with open('vocabulary.txt', 'w+') as f:
+    with open('vocabulary.csv', 'w+') as f:
+        f.write(repr(count) + '\n')
+        f.close()
+    print(count)
+
+    return count
+
+
+def run():
+    # Her kjøres programmet. Dataen blir hentet fra csv filen, og filtreres.
+    # Returnerer et vokabular med de mest nevnte ordene.
+    count_data(get_data())
+
+
+# tilkaller funksjonen som kjører programmet
+run()
+
+ll--------------------------------------lll-------------------------------------------------ll
+news = pd.read_csv('train.csv')
+ll--------------------------------------lll-------------------------------------------------ll
+print(news.head())
+ll--------------------------------------lll-------------------------------------------------ll
+from sklearn.preprocessing import LabelEncoder
+
+encoder = LabelEncoder()
+y = encoder.fit_transform(news['label'])
+print(y[:5])
+ll--------------------------------------lll-------------------------------------------------ll
+labels = news['label']
+text = news['text']
+N = len(text)
+print('Number of articles', N)
+ll--------------------------------------lll-------------------------------------------------ll
+labelz = list(set(labels))
+print('possible categories', labelz)
+ll--------------------------------------lll-------------------------------------------------ll
+for l in labelz:
+    print('number of ', l, 'articles', len(news.loc[news['label'] == l]))
+ll--------------------------------------lll-------------------------------------------------ll
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
+ll--------------------------------------lll-------------------------------------------------ll
+print('Training...')
+
+text_clf = Pipeline([('vect', CountVectorizer()),
+                    ('tfidf', TfidfTransformer()),
+                    ('clf', MultinomialNB()),
+                    ])
+ll--------------------------------------lll-------------------------------------------------ll
+Ntrain = int(N * 0.7)
+
+X_train = text[:Ntrain]
+print('X_train.shape', X_train.shape)
+y_train = labels[:Ntrain]
+print('y_train.shape', y_train.shape)
+X_test = text[Ntrain:]
+print('X_test.shape', X_test.shape)
+y_test = labels[Ntrain:]
+print('y_test.shape', y_test.shape)
+ll--------------------------------------lll-------------------------------------------------ll
+testin = text.values.astype('U') # for å bli kvitt en type feil, kan taes vekk å teste
+text_clf = testin.fit(X_train, y_train)
+ll--------------------------------------lll-------------------------------------------------ll
+print('Predicting...')
+predicted = text_clf.predict(X_test)
+ll--------------------------------------lll-------------------------------------------------ll
+from sklearn import metrics
+
+print('accuracy_score',metrics.accuracy_score(y_test,predicted))
+print('Reporting...')
+ll--------------------------------------lll-------------------------------------------------ll
