@@ -1,3 +1,5 @@
+# https://pythonmachinelearning.pro/text-classification-tutorial-with-naive-bayes/
+
 import re
 import string
 import math
