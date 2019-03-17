@@ -1,0 +1,93 @@
+import re
+import string
+import math
+import pandas as pd
+import numpy as np
+
+DATA_DIR = 'train.csv'
+target_names = ['real', 'fake']
+news = pd.read_csv('train.csv')
+data = news['text']
+data1 = data.replace(np.nan, 'data')
+target = news['label']
+
+
+class BsDetector(object):
+
+    """Implementation of Naive Bayes for binary classification"""
+    def clean(self, s):
+        translator = str.maketrans("", "", string.punctuation)
+        return s.translate(translator)
+
+    def tokenize(self, text):
+        text = self.clean(text).lower()
+        return re.split("\W+", text)
+
+    def get_word_counts(self, words):
+        word_counts = {}
+        for word in words:
+            word_counts[word] = word_counts.get(word, 0.0) + 1.0
+        return word_counts
+
+    def fit(self, X, Y):
+        self.num_messages = {}
+        self.log_class_priors = {}
+        self.word_counts = {}
+        self.vocab = set()
+
+        n = len(X)
+        self.num_messages['fake'] = sum(1 for label in Y if label == 1)
+        self.num_messages['real'] = sum(1 for label in Y if label == 0)
+        self.log_class_priors['fake'] = math.log(self.num_messages['fake'] / n)
+        self.log_class_priors['real'] = math.log(self.num_messages['real'] / n)
+        self.word_counts['fake'] = {}
+        self.word_counts['real'] = {}
+
+        for x, y in zip(X, Y):
+            C = 'fake' if y == 1 else 'real'
+            counts = self.get_word_counts(self.tokenize(x))
+            for word, count in counts.items():
+                if word not in self.vocab:
+                    self.vocab.add(word)
+                if word not in self.word_counts[C]:
+                    self.word_counts[C][word] = 0.0
+
+                self.word_counts[C][word] += count
+
+    def predict(self, X):
+        result = []
+        for x in X:
+            counts = self.get_word_counts(self.tokenize(x))
+            fake_score = 0
+            real_score = 0
+            for word, _ in counts.items():
+                if word not in self.vocab: continue
+
+                # add LapLace smoothing
+                log_w_given_fake = math.log((self.word_counts['fake'].get(word, 0.0) + 1) / (self.num_messages['fake'] + len(self.vocab)))
+                log_w_given_real = math.log((self.word_counts['real'].get(word, 0.0) + 1) / (self.num_messages['real'] + len(self.vocab)))
+
+                fake_score += log_w_given_fake
+                real_score += log_w_given_real
+
+            fake_score += self.log_class_priors['fake']
+            real_score += self.log_class_priors['real']
+
+            if fake_score > real_score:
+                result.append(1)
+            else:
+                result.append(0)
+            return result
+
+
+if __name__ == '__main__':
+    X = data1
+    y = target
+    MNB = BsDetector()
+    MNB.fit(X[100:], y[100:])
+
+    pred = MNB.predict(X[:100])
+    true = y[:100]
+
+    accuracy = sum(1 for i in range(len(pred)) if pred[i] == true[i] / float(len(pred)))
+    print("{0:.4f}".format(accuracy))
