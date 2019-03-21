@@ -33,7 +33,7 @@ def get_text(path):
     news = pd.read_csv(path, encoding='utf-8')
     print(".............Getting news-articles.............")
     text = news.text
-    print(len(text))
+    print("Total {} articles in the dataset".format(len(text)))
     train_text = []
     for i in range(len(text)):
         if text[i] not in train_text:
@@ -92,7 +92,7 @@ class MNBclassifier(object):
     def clean_news(self, text):
         # Funksjon hvor regex blir brukt til å fjerne alle bokstaver som ikke er i det engelske alfabetet.
         # Filtrerer bort stopwords som this, and, or osv.
-        print(".............Stripping and cleaning the text down to words.............")
+
         text = re.sub("[^ A-Za-z]", '', str(text)).lower().split()
 
         stop_words = set(stopwords.words('english'))
@@ -124,14 +124,12 @@ class MNBclassifier(object):
         self.log_class_priors['real'] = math.log(self.num_articles['real'] / len(X))
         self.word_counts['fake'] = {}
         self.word_counts['real'] = {}
-
+        print(".............Stripping and cleaning the text down to words.............")
         for x, y in zip(news, labels):
             C = 'fake' if y == 1 else 'real'
             counts = self.count_data(self.clean_news(x))
 
             for word, count in counts.items():
-                if word not in self.vocab:
-                    self.vocab.add(word)
                 if word not in self.word_counts[C]:
                     self.word_counts[C][word] = 0
 
@@ -150,14 +148,15 @@ if __name__ == '__main__':
     X = news2.text
     y = news2.label
 
-    # split = 0.67
-    # X_train, X_test = split_data(X, split)
-    # y_train, y_test = split_data(y, split)
-    # print('Split {0} articles where {1} articles is for training and {2} articles is for testing'.format(len(X),
-    #                                                                                                      len(X_train),
-    #                                                                                                      len(X_test)))
+    split = 0.67
+    X_train, X_test = split_data(X, split)
+    y_train, y_test = split_data(y, split)
+    print('Split {0} articles where {1} articles is for training and {2} articles is for testing'.format(len(X),
+                                                                                                         len(X_train),
+                                                                                                         len(X_test)))
     MNB = MNBclassifier()
-    MNB.fitting(X, y)
+    print("..............Fitting Data..............")
+    MNB.fitting(X_train, y_train)
 
     # pred = MNB.predict(X)
     # true = y
