@@ -6,17 +6,16 @@ import nltk
 from nltk import word_tokenize
 from nltk.corpus import stopwords
 from nltk.corpus import words
-from scipy import sparse
-from IPython.display import display
 import re
-from collections import Counter
-from nltk.classify import NaiveBayesClassifier
-import string
+from collections import Counter, defaultdict
 import random
 import math
+import pickle
+import csv
 
 
 def split_data(data, split):
+    # Funksjon som splitter datasettet med en angitt splitratio
     train_size = int(len(data) * split)
     train_set = []
     copy = list(data)
@@ -62,16 +61,27 @@ def create_vocabulary(text):
     # repr() metoden returnerer en utskrivbar representasjonsstreng av variabelen
     print(".............Counting all occurances of words.............")
     text = clean_text(text)
-    c = Counter(text)
-    count = Counter(k for k in c.elements() if c[k] >= 100)
+
+    word_counts = {}
+    for word in text:
+        word_counts[word] = word_counts.get(word, 0) + 1
+    print("before", len(word_counts))
+
+    for w in list(word_counts):
+        if word_counts[w] < 100:
+            del word_counts[w]
+
+    print("after", len(word_counts))
     print(".............Creating a vocabulary.............")
-    repr(count)
+
+    print("length of vocabulary", len(word_counts))
 #     with open('vocabulary.txt', 'w+') as f:
     with open('vocabulary.csv', 'w+') as f:
-        f.write(repr(count) + '\n')
+        f.write(repr(word_counts) + '\n')
         f.close()
-        print(".............Vocabulary has been created.............")
-    return count
+
+    print(".............Vocabulary has been created.............")
+    return word_counts
 
 
 def run():
@@ -102,26 +112,31 @@ class MNBclassifier(object):
         return text
 
     def count_data(self, words):
+        #Funksjon som teller antall ganger et ord oppstår
 
         #word_counts = Counter(words)
         #word_counts = Counter(k for k in word_counts.elements() if word_counts[k] >= 100)
         word_counts = {}
         for word in words:
-            word_counts[word] = word_counts.get(word, 0) + 1
+            word_counts[word] = word_counts.get(word, 0.0) + 1.0
 
         return word_counts
 
     def fitting(self, news, labels):
-        self.vocabulary = pd.read_csv('vocabulary.csv', delimiter=',')
-        self.vocab = self.vocabulary.copy()
+        #Funksjon som tilknytter training data mot classifier, og finner likelihood for at et ord enten er
+        #reliable eller unreliable
+
+        self.vocabulary = pd.read_csv('vocabulary.csv')
+        self.vocab = self.vocabulary.columns.copy()
+
         self.num_articles = {}
         self.log_class_priors = {}
         self.word_counts = {}
 
         self.num_articles['fake'] = sum(1 for label in labels if label == 1)
         self.num_articles['real'] = sum(1 for label in labels if label == 0)
-        self.log_class_priors['fake'] = math.log(self.num_articles['fake'] / len(X))
-        self.log_class_priors['real'] = math.log(self.num_articles['real'] / len(X))
+        self.log_class_priors['fake'] = math.log(self.num_articles['fake'] / len(news))
+        self.log_class_priors['real'] = math.log(self.num_articles['real'] / len(news))
         self.word_counts['fake'] = {}
         self.word_counts['real'] = {}
         print(".............Stripping and cleaning the text down to words.............")
@@ -130,15 +145,62 @@ class MNBclassifier(object):
             counts = self.count_data(self.clean_news(x))
 
             for word, count in counts.items():
+                # if word not in self.vocab:
+                #     continue
                 if word not in self.word_counts[C]:
                     self.word_counts[C][word] = 0
 
                 self.word_counts[C][word] += count
-        print(len(self.word_counts['real']))
-        print(len(self.word_counts['fake']))
+
+        for w in list(self.word_counts['fake']):
+            if self.word_counts['fake'][w] < 100:
+                del self.word_counts['fake'][w]
+        print("length of fake count", len(self.word_counts['fake']))
+
+        with open('label_one_count.csv', 'w+') as f:
+            f.write(repr(self.word_counts['fake']) + '\n')
+            f.close()
+
+        for w in list(self.word_counts['real']):
+            if self.word_counts['real'][w] < 100:
+                del self.word_counts['real'][w]
+        print("length of real count", len(self.word_counts['real']))
+
+        with open('label_zero_count.csv', 'w+') as f:
+            f.write(repr(self.word_counts['real']) + '\n')
+            f.close()
+
         print("there is {} articles in fake news and {} articles in real news".format(self.num_articles['fake'],
                                                                                       self.num_articles['real']))
 
+    def predict(self, news):
+
+        result = []
+        for x in news:
+            counts = self.count_data(self.clean_news(x))
+            fake_score = 0
+            real_score = 0
+            for word, _ in counts.items():
+                if word not in self.vocab:
+                    continue
+
+                #  LapLace smoothing
+                log_w_given_fake = math.log(
+                    (self.word_counts['fake'].get(word, 0.0) + 1.0) / (self.num_articles['fake'] + len(self.vocab)))
+                log_w_given_real = math.log(
+                    (self.word_counts['real'].get(word, 0.0) + 1.0) / (self.num_articles['real'] + len(self.vocab)))
+
+                fake_score += log_w_given_fake
+                real_score += log_w_given_real
+
+            fake_score += self.log_class_priors['fake']
+            real_score += self.log_class_priors['real']
+            print(real_score, fake_score)
+            if fake_score > real_score:
+                result.append(1)
+            else:
+                result.append(0)
+            return result
 
 if __name__ == '__main__':
 
@@ -158,8 +220,17 @@ if __name__ == '__main__':
     print("..............Fitting Data..............")
     MNB.fitting(X_train, y_train)
 
-    # pred = MNB.predict(X)
-    # true = y
-    #
-    # accuracy = sum(1 for i in range(len(pred)) if pred[i] == true[i] / float(len(pred)))
-    # print("Accuracy: {:.001%}".format(accuracy))
+    prediction = MNB.predict(X_train)
+    true = y_train
+
+    accuracy = sum(1 for i in range(len(prediction)) if prediction[i] == true[i] / float(len(prediction)))
+    print("Accuracy: {:.0%}".format(accuracy))
+
+    input_string = input('Please write something')
+    input_news = MNB.count_data(clean_text(input_string))
+
+    if MNB.predict(input_news) == 1:
+        print('This is fake news')
+    else:
+        print('This is reliable news')
+
